@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Field Entry — IDLC</title>
+<style>
+  /* ---------- bold token system: deep teal + saturated amber/coral ---------- */
+  :root{
+    --background: 40 38% 97%;
+    --foreground: 170 32% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 170 32% 10%;
+    --muted: 42 30% 93%;
+    --muted-foreground: 175 12% 38%;
+    --border: 40 20% 85%;
+    --input: 170 15% 78%;
+    --ring: 168 70% 24%;
+    --primary: 168 70% 22%;
+    --primary-foreground: 45 60% 97%;
+    --secondary: 42 45% 90%;
+    --secondary-foreground: 170 32% 14%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 170 40% 10%;
+    --accent-soft: 42 95% 93%;
+    --destructive: 7 72% 47%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 52% 28%;
+    --success-foreground: 0 0% 100%;
+    --warning-bg: 38 95% 94%;
+    --warning-border: 36 80% 68%;
+    --radius: 0.85rem;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:
+      radial-gradient(1100px 500px at 100% -10%, hsl(38 90% 88% / 0.55), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, hsl(168 60% 85% / 0.5), transparent 60%),
+      hsl(var(--background));
+    color:hsl(var(--foreground));
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    font-feature-settings:"tnum" 1,"cv11" 1;
+    font-size:14px;
+    line-height:1.5;
+  }
+  body{
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  #app{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;background:transparent;}
+
+  /* ---------- Responsive: tablet and laptop ----------
+     Below 768px (phones — the primary field-use case) the layout above is
+     unchanged. At 768px+ the app stops stretching into a narrow column with
+     wasted space on either side and instead sits as a framed card on the
+     page, with a wider usable area and a touch of extra breathing room. */
+  @media (min-width: 768px){
+    body{
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding-top:max(32px, env(safe-area-inset-top,0px));
+      padding-bottom:32px;
+      min-height:100vh;
+    }
+    #app{
+      max-width:640px;
+      min-height:auto;
+      border-radius:20px;
+      overflow:hidden;
+      box-shadow:0 20px 50px hsl(170 40% 15% / 0.18), 0 2px 10px hsl(170 40% 15% / 0.1);
+      border:1px solid hsl(var(--border));
+    }
+    .topbar{padding-left:28px;padding-right:28px;border-radius:20px 20px 0 0;}
+    main{padding-left:32px;padding-right:32px;}
+    .action-bar{
+      position:static;
+      border-radius:0 0 20px 20px;
+      backdrop-filter:none;-webkit-backdrop-filter:none;
+    }
+    .action-bar-inner{max-width:none;padding-left:4px;padding-right:4px;}
+    main.with-actionbar{padding-bottom:24px;}
+    .option-stack{flex-direction:row;}
+    .option-card{flex-direction:column;text-align:center;padding:26px 20px;}
+    .option-card .glyph{margin-bottom:4px;}
+    .option-card .check{position:absolute;top:14px;right:14px;}
+    .option-card{position:relative;}
+  }
+
+  /* ---------- Responsive: laptop / desktop ----------
+     At 1024px+, a touch more breathing room since there's ample space —
+     the field-use phone experience below 768px is untouched either way. */
+  @media (min-width: 1024px){
+    #app{max-width:720px;}
+    main{padding-left:44px;padding-right:44px;}
+    .topbar{padding-left:36px;padding-right:36px;}
+    .action-bar{padding-left:16px;padding-right:16px;}
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    background:linear-gradient(135deg, hsl(168 70% 20%), hsl(170 62% 15%));
+    color:hsl(45 60% 97%);
+    border-bottom:3px solid hsl(var(--accent));
+    padding:14px 20px;
+    padding-top:calc(14px + env(safe-area-inset-top,0px));
+    display:flex;align-items:center;gap:10px;
+    box-shadow:0 4px 16px hsl(168 70% 15% / 0.25);
+  }
+  .topbar .back-btn{
+    background:hsl(0 0% 100% / 0.12);border:none;color:hsl(45 60% 97%);font-size:13px;
+    padding:6px 10px;margin-left:-4px;cursor:pointer;
+    display:flex;align-items:center;gap:3px;border-radius:999px;font-weight:600;
+  }
+  .topbar .back-btn:hover{background:hsl(0 0% 100% / 0.2);}
+  .topbar .brand{font-size:14px;font-weight:700;letter-spacing:-0.01em;}
+  .topbar .brand .sub{font-weight:500;color:hsl(42 70% 78%);}
+
+  main{flex:1;padding:24px 20px 24px;}
+  main.with-actionbar{padding-bottom:132px;}
+
+  /* ---------- Typography ---------- */
+  h1{font-size:21px;font-weight:800;letter-spacing:-0.02em;margin:0 0 4px;line-height:1.25;color:hsl(var(--primary));}
+  h2{font-size:17px;font-weight:800;letter-spacing:-0.015em;margin:0;color:hsl(var(--primary));}
+  p.lede{font-size:13.5px;color:hsl(var(--muted-foreground));line-height:1.55;margin:4px 0 24px;}
+  .meta-line{
+    font-size:12px;font-weight:700;color:hsl(var(--primary));margin:2px 0 20px;
+    display:inline-flex;align-items:center;gap:6px;background:hsl(var(--secondary));
+    padding:5px 11px;border-radius:999px;
+  }
+  label{display:block;font-size:12.5px;font-weight:700;color:hsl(var(--foreground));margin:0 0 6px;}
+  .field-hint{font-size:12px;color:hsl(var(--muted-foreground));margin-top:5px;line-height:1.4;}
+  .error-text{font-size:12px;color:hsl(var(--destructive));margin-top:5px;font-weight:500;display:none;}
+  .field.invalid .error-text{display:block;}
+  .field.invalid input,.field.invalid select{
+    border-color:hsl(var(--destructive)) !important;
+    box-shadow:0 0 0 3px hsl(var(--destructive)/0.1) !important;
+  }
+  /* A segmented Yes/No field has no <input>/<select> inside it, so the rule
+     above never applied — an unanswered Yes/No question was marked .invalid
+     in the DOM but showed no visual change at all. This makes it visible:
+     a red-tinted panel around the whole question plus red borders on both
+     buttons, so the segmented control reads as flagged just like a text field. */
+  .field.invalid .segmented{
+    padding:8px;margin:-8px;border-radius:calc(var(--radius) - 2px);
+    background:hsl(var(--destructive)/0.08);
+    box-shadow:0 0 0 2px hsl(var(--destructive)/0.5);
+  }
+  .field.invalid .segmented button:not(.active){
+    border-color:hsl(var(--destructive)/0.5) !important;
+  }
+  .field.invalid > label{color:hsl(var(--destructive));}
+
+  /* ---------- Select-one cards (form / role picker) ---------- */
+  .option-stack{display:flex;flex-direction:column;gap:12px;margin-bottom:8px;}
+  .option-card{
+    display:flex;align-items:center;gap:14px;
+    background:hsl(var(--card));
+    border:2px solid hsl(var(--border));
+    border-radius:var(--radius);
+    padding:17px 18px;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    transition:border-color .12s ease, background .12s ease, transform .12s ease;
+    box-shadow:0 1px 3px hsl(170 30% 20% / 0.06);
+  }
+  .option-card:hover{border-color:hsl(var(--accent));transform:translateY(-1px);}
+  .option-card:active{transform:translateY(0);}
+  .option-card.selected{
+    border-color:hsl(var(--primary));
+    background:hsl(var(--primary) / 0.06);
+    box-shadow:0 0 0 1px hsl(var(--primary)), 0 6px 16px hsl(168 70% 20% / 0.12);
+  }
+  .option-card .glyph{
+    flex:none;width:42px;height:42px;border-radius:12px;
+    background:linear-gradient(135deg, hsl(var(--accent)), hsl(32 92% 52%));
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:800;color:hsl(170 40% 12%);
+  }
+  .option-card.selected .glyph{background:linear-gradient(135deg, hsl(var(--primary)), hsl(168 70% 28%));color:hsl(var(--primary-foreground));}
+  .option-card .text-wrap{flex:1;min-width:0;}
+  .option-card .label{font-size:15px;font-weight:700;color:hsl(var(--foreground));}
+  .option-card .sub{font-size:12px;color:hsl(var(--muted-foreground));margin-top:2px;}
+  .option-card .check{
+    flex:none;width:20px;height:20px;border-radius:50%;border:2px solid hsl(var(--border));
+    display:flex;align-items:center;justify-content:center;
+  }
+  .option-card.selected .check{background:hsl(var(--primary));border-color:hsl(var(--primary));color:hsl(var(--primary-foreground));font-size:11px;font-weight:800;}
+
+  /* ---------- Form controls ---------- */
+  .field{margin-bottom:16px;}
+  input[type=text],input[type=tel],input[type=number],select{
+    width:100%;
+    font-size:15px;
+    padding:9.5px 12px;
+    border:1px solid hsl(var(--input));
+    border-radius:calc(var(--radius) - 2px);
+    background:hsl(var(--background));
+    color:hsl(var(--foreground));
+    font-family:inherit;
+    appearance:none;
+    -webkit-appearance:none;
+    transition:border-color .12s ease, box-shadow .12s ease;
+  }
+  /* Date inputs keep native appearance so the OS/browser calendar picker
+     works reliably everywhere — "none" on this type silently breaks the
+     picker trigger on several Android/webview browsers. */
+  input[type=date]{
+    width:100%;
+    font-size:15px;
+    padding:9.5px 12px;
+    border:1px solid hsl(var(--input));
+    border-radius:calc(var(--radius) - 2px);
+    background:hsl(var(--background));
+    color:hsl(var(--foreground));
+    font-family:inherit;
+    transition:border-color .12s ease, box-shadow .12s ease;
+    min-height:42px;
+  }
+  input[type=date]::-webkit-calendar-picker-indicator{
+    cursor:pointer;
+    padding:4px;
+    margin-left:4px;
+    border-radius:5px;
+    filter:invert(23%) sepia(41%) saturate(1200%) hue-rotate(130deg);
+  }
+  input::placeholder{color:hsl(var(--muted-foreground)/0.7);}
+  input:focus,select:focus{
+    outline:none;border-color:hsl(var(--ring));
+    box-shadow:0 0 0 3px hsl(var(--ring)/0.12);
+  }
+  select{
+    background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%23115e46' d='M4 6l4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat:no-repeat;
+    background-position:right 12px center;
+    padding-right:34px;
+  }
+
+  .segmented{display:flex;gap:8px;}
+  .segmented button{
+    flex:1;padding:10px 8px;border-radius:calc(var(--radius) - 3px);
+    border:2px solid hsl(var(--input));background:hsl(var(--card));
+    font-size:13.5px;font-weight:700;color:hsl(var(--muted-foreground));cursor:pointer;
+    font-family:inherit;transition:all .12s ease;
+  }
+  .segmented button:hover{border-color:hsl(var(--primary)/0.5);}
+  .segmented button.active{background:hsl(var(--primary));color:hsl(var(--primary-foreground));border-color:hsl(var(--primary));}
+  .segmented button.active.yes{background:hsl(var(--success));border-color:hsl(var(--success));color:#fff;}
+  .segmented button.active.no{background:hsl(var(--destructive));border-color:hsl(var(--destructive));color:#fff;}
+
+  .amount-wrap{position:relative;}
+  .amount-wrap .currency{
+    position:absolute;left:12px;top:50%;transform:translateY(-50%);
+    font-weight:600;color:hsl(var(--muted-foreground));font-size:14px;pointer-events:none;
+  }
+  .amount-wrap input{padding-left:30px;}
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:100%;text-align:center;
+    padding:12px 16px;border-radius:calc(var(--radius) - 3px);
+    font-size:14px;font-weight:700;border:2px solid transparent;cursor:pointer;
+    font-family:inherit;transition:all .12s ease;
+  }
+  .btn-primary{background:linear-gradient(135deg, hsl(var(--primary)), hsl(168 65% 18%));color:hsl(var(--primary-foreground));box-shadow:0 2px 8px hsl(168 70% 20% / 0.25);}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px hsl(168 70% 20% / 0.3);}
+  .btn-primary:disabled{background:hsl(var(--muted-foreground)/0.3);box-shadow:none;cursor:not-allowed;transform:none;}
+  .btn-outline{background:hsl(var(--card));color:hsl(var(--primary));border-color:hsl(var(--primary)/0.35);}
+  .btn-outline:hover{background:hsl(var(--primary)/0.06);border-color:hsl(var(--primary));}
+  .btn-ghost{background:none;color:hsl(var(--muted-foreground));border-color:transparent;}
+  .btn-ghost:hover{color:hsl(var(--foreground));background:hsl(var(--secondary));}
+  .btn-dashed{
+    background:hsl(var(--accent-soft));color:hsl(32 70% 32%);
+    border:2px dashed hsl(var(--accent));font-weight:700;
+  }
+  .btn-dashed:hover{background:hsl(var(--accent)/0.25);}
+  .btn-link-danger{background:none;border:none;color:hsl(var(--destructive));font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;padding:4px 2px;}
+  .btn-link-danger:hover{text-decoration:underline;}
+
+  /* ---------- Client cards ---------- */
+  .client-card{
+    background:hsl(var(--card));
+    border:1px solid hsl(var(--border));
+    border-left:4px solid hsl(var(--primary));
+    border-radius:var(--radius);
+    padding:17px 16px 15px;
+    margin-bottom:14px;
+    box-shadow:0 1px 3px hsl(170 30% 20% / 0.05);
+  }
+  .client-card .card-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:15px;padding-bottom:13px;border-bottom:1px dashed hsl(var(--border));
+  }
+  .client-card .card-head .num{
+    display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:hsl(var(--primary));
+  }
+  .client-card .card-head .num .dot{
+    width:22px;height:22px;border-radius:7px;background:hsl(var(--primary));color:hsl(var(--primary-foreground));
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;
+  }
+  .conditional{
+    margin:-2px 0 16px;padding:13px 14px;
+    background:hsl(var(--accent-soft));
+    border-radius:calc(var(--radius) - 3px);
+    border:1px solid hsl(var(--accent)/0.4);
+    border-left:3px solid hsl(var(--accent));
+  }
+  .conditional .field:last-child{margin-bottom:0;}
+
+  .progress-row{display:flex;gap:5px;margin:0 0 22px;}
+  .progress-row .seg{height:4px;flex:1;background:hsl(var(--border));border-radius:2px;overflow:hidden;}
+  .progress-row .seg.filled{background:linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));}
+
+  /* ---------- Footer action bar ---------- */
+  .action-bar{
+    position:fixed;bottom:0;left:0;right:0;z-index:20;
+    background:hsl(var(--card)/0.97);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    border-top:1px solid hsl(var(--border));
+    padding:12px 20px;
+    padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -4px 16px hsl(170 30% 20% / 0.06);
+  }
+  .action-bar-inner{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;}
+
+  /* ---------- Modal / overlay ---------- */
+  .overlay{
+    position:fixed;inset:0;background:hsl(222 20% 8% / 0.45);
+    display:flex;align-items:flex-end;justify-content:center;z-index:50;
+    padding:14px;
+    animation:fadeInBg .15s ease;
+  }
+  .overlay.center{align-items:center;}
+  .overlay[hidden]{display:none;}
+  @keyframes fadeInBg{from{opacity:0;}to{opacity:1;}}
+  /* A bottom sheet reads as a natural mobile pattern on a phone; on a wider
+     screen (tablet/laptop) the same bottom-pinned sheet looks stranded in
+     empty space, so modals center on the screen instead at that width. */
+  @media (min-width: 768px){
+    .overlay{align-items:center;}
+  }
+  .modal{
+    background:hsl(var(--card));border-radius:calc(var(--radius) + 4px);
+    max-width:420px;width:100%;padding:22px 20px;
+    box-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    border:1px solid hsl(var(--border));
+    animation:slideUp .18s ease;
+  }
+  @keyframes slideUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+  .modal .modal-icon{
+    width:42px;height:42px;border-radius:50%;background:hsl(var(--warning-bg));color:hsl(32 80% 42%);
+    display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;margin-bottom:13px;
+    border:2px solid hsl(var(--warning-border));
+  }
+  .modal .modal-icon.danger{background:hsl(var(--destructive)/0.12);color:hsl(var(--destructive));border-color:hsl(var(--destructive)/0.3);}
+  .modal .modal-icon.success{background:hsl(var(--success)/0.12);color:hsl(var(--success));border-color:hsl(var(--success)/0.3);}
+  .modal h3{font-size:16.5px;font-weight:800;margin:0 0 6px;letter-spacing:-0.01em;color:hsl(var(--primary));}
+  .modal p{font-size:13.5px;color:hsl(var(--muted-foreground));line-height:1.55;margin:0 0 18px;}
+  .modal .modal-actions{display:flex;flex-direction:column-reverse;gap:8px;}
+
+  /* ---------- High-alert modal variant (role mismatch) ---------- */
+  .modal.alert-modal{
+    padding:0;overflow:hidden;border:2px solid hsl(var(--destructive));
+    box-shadow:0 10px 30px hsl(0 70% 30% / 0.25), 0 0 0 4px hsl(var(--destructive)/0.1);
+  }
+  .alert-band{
+    background:repeating-linear-gradient(135deg, hsl(var(--destructive)) 0px, hsl(var(--destructive)) 14px, hsl(0 72% 40%) 14px, hsl(0 72% 40%) 28px);
+    padding:18px 20px 16px;
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+  }
+  .alert-triangle{
+    font-size:38px;line-height:1;margin-bottom:6px;
+    filter:drop-shadow(0 2px 3px rgb(0 0 0 / 0.25));
+  }
+  .alert-band .alert-title{
+    font-size:17px;font-weight:900;color:#fff;letter-spacing:0.01em;
+    text-shadow:0 1px 2px rgb(0 0 0 / 0.2);
+  }
+  .alert-body{padding:20px;}
+  .alert-body p{font-size:14px;color:hsl(var(--foreground));line-height:1.6;margin:0 0 18px;}
+  .alert-body p strong{color:hsl(var(--destructive));}
+  .alert-body .modal-actions{display:flex;flex-direction:column-reverse;gap:8px;}
+
+  /* ---------- Success screen ---------- */
+  .success-wrap{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:16vh;}
+  .success-badge{
+    width:60px;height:60px;border-radius:50%;
+    background:linear-gradient(135deg, hsl(var(--success)), hsl(152 55% 22%));color:#fff;
+    box-shadow:0 6px 20px hsl(152 52% 28% / 0.3);
+    display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:18px;
+  }
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(6px);
+    background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:11px 18px;border-radius:999px;
+    font-size:13px;font-weight:700;box-shadow:0 10px 20px hsl(168 70% 20% / 0.25);
+    z-index:80;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .badge{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;
+    background:hsl(var(--secondary));color:hsl(var(--primary));
+    border:1px solid hsl(var(--border));
+  }
+
+  [hidden]{display:none !important;}
+  .screen{animation:fadeIn .15s ease;}
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  @media (prefers-reduced-motion: reduce){ .screen,.modal,.overlay{animation:none;} }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <button class="back-btn" id="backBtn" hidden onclick="App.goBack()">← Back</button>
+    <div class="brand" id="topbarBrand">Field Entry <span class="sub">— IDLC</span></div>
+  </div>
+
+  <main id="main"></main>
+
+  <div class="action-bar" id="actionBar" hidden>
+    <div class="action-bar-inner" id="actionBarInner"></div>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   STORAGE LAYER (Supabase / Postgres via REST)
+   Same table shape as before, now a real shared cloud database instead of
+   per-device IndexedDB. Uses plain fetch() against Supabase's auto-generated
+   REST API (PostgREST) — no SDK/CDN import needed, keeping this a single
+   self-contained file. The public "anon"/"publishable" key below is SAFE to
+   ship in frontend code; it only has the permissions granted by the
+   row-level-security policies set up in Supabase (insert-only on visit/
+   client tables, read+insert on roster) — it cannot bypass those.
+   ========================================================================= */
+const SUPABASE_URL = "https://ptcdymvurzpghzgpdvdd.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ev5qVVL7a5sJYXYA8q8GdA_bMC_z_-A";
+const REST_BASE = `${SUPABASE_URL}/rest/v1`;
+
+function supabaseHeaders(extra){
+  return Object.assign({
+    "apikey": SUPABASE_ANON_KEY,
+    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+    "Content-Type": "application/json"
+  }, extra || {});
+}
+
+// storeName -> { table, pk } mapping. Table names match the storeName 1:1
+// except roster, which keeps its existing "cif" primary key instead of "id".
+const TABLE_MAP = {
+  roster: { table: "roster", pk: "cif" },
+  collection_visits: { table: "collection_visits", pk: "id" },
+  collection_clients: { table: "collection_clients", pk: "id" },
+  activity_visits: { table: "activity_visits", pk: "id" },
+  activity_clients: { table: "activity_clients", pk: "id" }
+};
+
+// Insert-or-update a single record by primary key (used for roster).
+// Supabase's REST API does this via POST with a Prefer: resolution=merge-duplicates
+// header, which upserts on the table's primary key.
+async function putRecord(storeName, record){
+  const { table } = TABLE_MAP[storeName];
+  const res = await fetch(`${REST_BASE}/${table}`, {
+    method: "POST",
+    headers: supabaseHeaders({ "Prefer": "resolution=merge-duplicates,return=representation" }),
+    body: JSON.stringify(record)
+  });
+  if(!res.ok){
+    const errText = await res.text();
+    throw new Error(`putRecord failed (${table}): ${res.status} ${errText}`);
+  }
+  const data = await res.json();
+  return data && data[0] ? data[0] : null;
+}
+
+// Fetch a single record by primary key value.
+async function getRecord(storeName, key){
+  const { table, pk } = TABLE_MAP[storeName];
+  const res = await fetch(`${REST_BASE}/${table}?${pk}=eq.${encodeURIComponent(key)}&limit=1`, {
+    method: "GET",
+    headers: supabaseHeaders()
+  });
+  if(!res.ok){
+    const errText = await res.text();
+    throw new Error(`getRecord failed (${table}): ${res.status} ${errText}`);
+  }
+  const data = await res.json();
+  return data && data[0] ? data[0] : undefined;
+}
+
+// Insert a new record and return its generated id (for visit/client tables,
+// which use Postgres's generated-always-as-identity auto-increment).
+async function addRecordAutoIncrement(storeName, record){
+  const { table, pk } = TABLE_MAP[storeName];
+  const res = await fetch(`${REST_BASE}/${table}`, {
+    method: "POST",
+    headers: supabaseHeaders({ "Prefer": "return=representation" }),
+    body: JSON.stringify(record)
+  });
+  if(!res.ok){
+    const errText = await res.text();
+    throw new Error(`addRecordAutoIncrement failed (${table}): ${res.status} ${errText}`);
+  }
+  const data = await res.json();
+  return data && data[0] ? data[0][pk] : null;
+}
+
+/* No local seeding needed anymore — the real roster lives in Supabase.
+   Kept as a no-op so the existing App.init() call site doesn't need changes. */
+async function seedRosterIfEmpty(){
+  return;
+}
+
+/* =========================================================================
+   VALIDATION
+   ========================================================================= */
+const V = {
+  cif(v){ return /^\d{6}$/.test((v||"").trim()); },
+  mobileBD(v){ return /^01[3-9]\d{8}$/.test((v||"").trim()); },
+  nonEmpty(v){ return (v||"").trim().length > 0; },
+  amount(v){
+    if((v||"").trim()==="") return false;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0;
+  },
+  futureDate(v){
+    if(!v) return false;
+    const d = new Date(v+"T00:00:00");
+    const today = new Date(); today.setHours(0,0,0,0);
+    return d.getTime() >= today.getTime();
+  }
+};
+
+function fmtTimestamp(){
+  const d = new Date();
+  const pad = n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+/* =========================================================================
+   APP STATE + ROUTER
+   The form choice ITSELF implies the expected role — Collection form implies
+   Collection Officer, RM Activity form implies RM. There is only ONE
+   selection screen now. The roster check (with its own confirm/override
+   modal) is the safety net for the rare case of a wrong-form submission —
+   it is not a second manual role pick.
+   ========================================================================= */
+const FORM_META = {
+  collection: { label:"Collection", expectedRole:"collection", roleLabel:"Collection Officer" },
+  activity:   { label:"RM Activity", expectedRole:"rm", roleLabel:"Relationship Manager" }
+};
+
+const App = {
+  state: {
+    screen: "home",
+    formType: null,
+    cif: null,
+    officerName: null,
+    clients: [],
+    history: []
+  },
+
+  async init(){
+    await seedRosterIfEmpty();
+    this.render();
+  },
+
+  goTo(screen, opts){
+    this.state.history.push(this.state.screen);
+    this.state.screen = screen;
+    if(opts) Object.assign(this.state, opts);
+    this.render();
+    window.scrollTo(0,0);
+  },
+
+  goBack(){
+    const prev = this.state.history.pop();
+    if(!prev){ this.resetAll(); return; }
+    this.state.screen = prev;
+    this.render();
+    window.scrollTo(0,0);
+  },
+
+  resetAll(){
+    Object.assign(this.state, { screen:"home", formType:null, cif:null, officerName:null, clients:[], history:[] });
+    this.render();
+    window.scrollTo(0,0);
+  },
+
+  render(){
+    const main = document.getElementById("main");
+    const backBtn = document.getElementById("backBtn");
+    const actionBar = document.getElementById("actionBar");
+    backBtn.hidden = (this.state.history.length === 0);
+    actionBar.hidden = true;
+    document.getElementById("actionBarInner").innerHTML = "";
+    main.classList.remove("with-actionbar");
+
+    const screens = {
+      home: Screens.home,
+      cif: Screens.cif,
+      collectionForm: Screens.collectionForm,
+      activityForm: Screens.activityForm,
+      success: Screens.success
+    };
+    const fn = screens[this.state.screen] || Screens.home;
+    main.innerHTML = "";
+    main.classList.remove("screen"); void main.offsetWidth; main.classList.add("screen");
+    fn(main);
+  }
+};
+
+/* =========================================================================
+   SCREENS
+   ========================================================================= */
+const Screens = {};
+
+/* ---- HOME: single choice — which form (this IS the role) ---- */
+Screens.home = (main)=>{
+  main.innerHTML = `
+    <h1>What are you submitting?</h1>
+    <p class="lede">Choose your form. You'll confirm your CIF next.</p>
+    <div class="option-stack">
+      <div class="option-card" id="pickCollection">
+        <div class="glyph">৳</div>
+        <div class="text-wrap">
+          <div class="label">Collection</div>
+          <div class="sub">For Collection Officers — client collection &amp; commitment log</div>
+        </div>
+      </div>
+      <div class="option-card" id="pickActivity">
+        <div class="glyph">→</div>
+        <div class="text-wrap">
+          <div class="label">RM Activity</div>
+          <div class="sub">For Relationship Managers — client visit &amp; purpose log</div>
+        </div>
+      </div>
+    </div>
+  `;
+  main.querySelector("#pickCollection").onclick = ()=>{
+    App.goTo("cif", { formType:"collection", cif:null, officerName:null, clients:[] });
+  };
+  main.querySelector("#pickActivity").onclick = ()=>{
+    App.goTo("cif", { formType:"activity", cif:null, officerName:null, clients:[] });
+  };
+};
+
+/* ---- CIF confirmation screen — one field, no second role pick ---- */
+Screens.cif = (main)=>{
+  const meta = FORM_META[App.state.formType];
+  main.innerHTML = `
+    <h1>Confirm your CIF</h1>
+    <p class="lede">Submitting the <strong>${meta.label}</strong> form as a <strong>${meta.roleLabel}</strong>.</p>
+
+    <div class="field" id="cifField">
+      <label for="cifInput">Your CIF</label>
+      <input type="tel" id="cifInput" inputmode="numeric" maxlength="6" placeholder="6-digit CIF, e.g. 102345" autocomplete="off">
+      <div class="error-text">Enter a valid 6-digit CIF.</div>
+    </div>
+  `;
+  main.querySelector("#cifInput").focus();
+
+  const actionBar = document.getElementById("actionBar");
+  const inner = document.getElementById("actionBarInner");
+  actionBar.hidden = false;
+  inner.innerHTML = `<button class="btn btn-primary" id="continueBtn">Continue</button>`;
+
+  const continueBtn = inner.querySelector("#continueBtn");
+  continueBtn.onclick = async ()=>{
+    const cifField = document.getElementById("cifField");
+    const cifInput = document.getElementById("cifInput");
+    cifField.classList.remove("invalid");
+
+    if(!V.cif(cifInput.value)){
+      cifField.classList.add("invalid");
+      return;
+    }
+
+    const cif = cifInput.value.trim();
+
+    // Visible loading state — without this, a slow/failed network call
+    // looked exactly like a dead button, since nothing changed on screen
+    // while waiting.
+    const originalLabel = continueBtn.textContent;
+    continueBtn.disabled = true;
+    continueBtn.textContent = "Checking...";
+
+    let rosterEntry;
+    try{
+      rosterEntry = await getRecord("roster", cif);
+    }catch(err){
+      // Previously this error was never caught — it just silently killed
+      // the handler, which looked exactly like "Continue does nothing".
+      console.error("CIF lookup failed:", err);
+      continueBtn.disabled = false;
+      continueBtn.textContent = originalLabel;
+      toast("Couldn't reach the server. Check your connection and try again.");
+      return;
+    }
+
+    continueBtn.disabled = false;
+    continueBtn.textContent = originalLabel;
+
+    if(!rosterEntry){
+      Modals.unrecognizedCIF(cif, meta.expectedRole);
+      return;
+    }
+    if(rosterEntry.role !== meta.expectedRole){
+      Modals.roleMismatch(rosterEntry, meta, cif);
+      return;
+    }
+    proceedToForm(cif, rosterEntry.name);
+  };
+
+  cifInput_enterToSubmit();
+  function cifInput_enterToSubmit(){
+    document.getElementById("cifInput").addEventListener("keydown", (e)=>{
+      if(e.key === "Enter") document.getElementById("continueBtn").click();
+    });
+  }
+};
+
+function proceedToForm(cif, name){
+  const target = App.state.formType === "collection" ? "collectionForm" : "activityForm";
+  App.goTo(target, {
+    cif, officerName:name,
+    clients: [ App.state.formType === "collection" ? blankCollectionClient() : blankActivityClient() ]
+  });
+}
+
+/* ---- Modals ---- */
+const Modals = {
+  show(html){
+    const overlay = document.getElementById("overlay");
+    const box = document.getElementById("modalBox");
+    // Always reset to the plain modal class before injecting new content.
+    // Without this, a modal that had the red "alert-modal" styling applied
+    // (role-mismatch warning) stayed red-bordered for every modal shown
+    // afterwards in the session, since nothing ever cleared that class.
+    box.className = "modal";
+    box.innerHTML = html;
+    overlay.hidden = false;
+    overlay.onclick = (e)=>{ if(e.target === overlay) this.hide(); };
+  },
+  hide(){
+    document.getElementById("overlay").hidden = true;
+    clearInterval(this._mismatchTimer); // tapping the backdrop also stops any running mismatch countdown
+  },
+
+  roleMismatch(rosterEntry, meta, cif){
+    const otherRoleBn = rosterEntry.role === "collection" ? "কালেকশন অফিসার" : "রিলেশনশিপ ম্যানেজার (RM)";
+    const formLabelBn = meta.expectedRole === "collection" ? "কালেকশন" : "RM অ্যাক্টিভিটি";
+    const WAIT_SECONDS = 10;
+
+    const overlay = document.getElementById("overlay");
+    const box = document.getElementById("modalBox");
+    // This modal gets its own class added ON TOP of the base "modal" class
+    // (never outerHTML-replaced) so #modalBox always stays the same element
+    // with a stable id — show() above resets this class back to plain
+    // "modal" the next time any other modal opens.
+    box.className = "modal alert-modal";
+    box.innerHTML = `
+      <div class="alert-band">
+        <div class="alert-triangle">⚠️</div>
+        <div class="alert-title">ভুল ফর্ম! সাবধান</div>
+      </div>
+      <div class="alert-body">
+        <p>
+          CIF <strong>${cif}</strong> (${esc(rosterEntry.name)}) রেকর্ড অনুযায়ী একজন
+          <strong>${otherRoleBn}</strong>। কিন্তু আপনি এখন <strong>${formLabelBn}</strong> ফর্ম পূরণ করছেন।
+          <br><br>
+          আপনি কি নিশ্চিত যে এটি আপনিই পূরণ করছেন?
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="mmContinue" disabled>এগিয়ে যান (${WAIT_SECONDS}স)</button>
+          <button class="btn btn-outline" id="mmBack">ফিরে যান</button>
+        </div>
+      </div>
+    `;
+    overlay.hidden = false;
+    overlay.onclick = (e)=>{ if(e.target === overlay) Modals.hide(); };
+
+    document.getElementById("mmBack").onclick = ()=>{
+      clearInterval(Modals._mismatchTimer);
+      Modals.hide();
+    };
+
+    const continueBtn = document.getElementById("mmContinue");
+    let remaining = WAIT_SECONDS;
+    clearInterval(Modals._mismatchTimer); // guard against a stray prior timer
+    Modals._mismatchTimer = setInterval(()=>{
+      remaining -= 1;
+      if(remaining <= 0){
+        clearInterval(Modals._mismatchTimer);
+        continueBtn.disabled = false;
+        continueBtn.textContent = "এগিয়ে যান";
+      } else {
+        continueBtn.textContent = `এগিয়ে যান (${remaining}স)`;
+      }
+    }, 1000);
+
+    continueBtn.onclick = ()=>{
+      if(continueBtn.disabled) return; // can't be clicked while disabled, but guard anyway
+      clearInterval(Modals._mismatchTimer);
+      Modals.hide();
+      proceedToForm(cif, rosterEntry.name);
+    };
+  },
+
+  unrecognizedCIF(cif, expectedRole){
+    this.show(`
+      <div class="modal-icon">?</div>
+      <h3>CIF not recognized</h3>
+      <p>CIF <strong>${cif}</strong> isn't in the current roster. Try again, or register it now to continue.</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="unrRegister">Register as new</button>
+        <button class="btn btn-outline" id="unrTry">Try again</button>
+      </div>
+    `);
+    document.getElementById("unrTry").onclick = ()=>Modals.hide();
+    document.getElementById("unrRegister").onclick = ()=>{
+      Modals.hide();
+      Modals.registerForm(cif, expectedRole);
+    };
+  },
+
+  registerForm(cif, expectedRole){
+    this.show(`
+      <h3>Quick registration</h3>
+      <p>Enough to get you moving — this is flagged for review, not auto-confirmed.</p>
+      <div class="field" id="regCifField">
+        <label>CIF</label>
+        <input type="tel" id="regCif" inputmode="numeric" maxlength="6" value="${cif}">
+        <div class="error-text" id="regCifError">Enter a valid 6-digit CIF.</div>
+      </div>
+      <div class="field" id="regNameField">
+        <label>Your name</label>
+        <input type="text" id="regName" placeholder="Full name">
+        <div class="error-text">Enter your name.</div>
+      </div>
+      <div class="field" style="margin-bottom:18px;">
+        <label>Role</label>
+        <div class="segmented" id="regRoleSeg">
+          <button type="button" data-role="collection" class="${expectedRole==='collection'?'active':''}">Collection Officer</button>
+          <button type="button" data-role="rm" class="${expectedRole==='rm'?'active':''}">RM</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="regSubmit">Register &amp; continue</button>
+        <button class="btn btn-ghost" id="regCancel">Cancel</button>
+      </div>
+    `);
+
+    let regRole = expectedRole;
+    const seg = document.getElementById("regRoleSeg");
+    seg.querySelectorAll("button").forEach(b=>{
+      b.onclick = ()=>{
+        seg.querySelectorAll("button").forEach(x=>x.classList.remove("active"));
+        b.classList.add("active");
+        regRole = b.dataset.role;
+      };
+    });
+
+    document.getElementById("regCancel").onclick = ()=>Modals.hide();
+    document.getElementById("regSubmit").onclick = async ()=>{
+      const cifF = document.getElementById("regCifField");
+      const nameF = document.getElementById("regNameField");
+      const cifInput = document.getElementById("regCif");
+      const nameInput = document.getElementById("regName");
+      const cifErrorText = document.getElementById("regCifError");
+      cifF.classList.remove("invalid"); nameF.classList.remove("invalid");
+      cifErrorText.textContent = "Enter a valid 6-digit CIF.";
+
+      let ok = true;
+      if(!V.cif(cifInput.value)){ cifF.classList.add("invalid"); ok=false; }
+      if(!V.nonEmpty(nameInput.value)){ nameF.classList.add("invalid"); ok=false; }
+      if(!ok) return;
+
+      const typedCif = cifInput.value.trim();
+
+      // Guard: re-check the roster for this exact CIF right before writing.
+      // Covers both the CIF that triggered "not recognized" AND any CIF the
+      // person edits it to in this form — never silently overwrite an
+      // existing roster entry (confirmed OR a prior self-registration).
+      const existing = await getRecord("roster", typedCif);
+      if(existing){
+        cifF.classList.add("invalid");
+        cifErrorText.textContent = `CIF ${typedCif} is already registered to ${existing.name}. Go back and try your CIF again, or use a different one.`;
+        return;
+      }
+
+      const entry = { cif: typedCif, name: nameInput.value.trim(), role: regRole, status: "self_registered" };
+      await putRecord("roster", entry);
+      Modals.hide();
+      toast("Registered — pending review.");
+      proceedToForm(entry.cif, entry.name);
+    };
+  },
+
+  confirmSubmit(formType, onConfirm){
+    const label = formType === "collection" ? "Collection" : "RM Activity";
+    const count = App.state.clients.length;
+    const names = App.state.clients
+      .map(c => (c.clientName || "").trim())
+      .filter(Boolean);
+
+    // Built as separate block-level pieces (not one <p> with inline <br><br>
+    // and nested <span> tags) — that inline structure was wrapping unevenly
+    // once the text got longer on the Collection form (more fields → longer
+    // officer/CIF/names line), which read as "misaligned". Each line is now
+    // its own block so it wraps cleanly regardless of content length.
+    this.show(`
+      <div class="modal-icon success">✓</div>
+      <h3>Ready to submit?</h3>
+      <p style="margin-bottom:10px;">
+        You're submitting <strong>${count}</strong> client ${count===1?'record':'records'} to the <strong>${label}</strong> form.
+      </p>
+      <p style="margin-bottom:${names.length ? '10px' : '18px'};">
+        As <strong>${esc(App.state.officerName)}</strong> &middot; CIF ${App.state.cif}
+      </p>
+      ${names.length ? `
+      <p style="margin-bottom:18px;color:hsl(var(--primary));font-weight:600;word-break:break-word;">
+        ${names.map(n => esc(n)).join(', ')}
+      </p>` : ''}
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="csYes">Yes, submit</button>
+        <button class="btn btn-outline" id="csNo">Go back and review</button>
+      </div>
+    `);
+    document.getElementById("csNo").onclick = ()=>Modals.hide();
+    document.getElementById("csYes").onclick = ()=>{ Modals.hide(); onConfirm(); };
+  }
+};
+
+/* =========================================================================
+   COLLECTION FORM
+   ========================================================================= */
+function blankCollectionClient(){
+  return {
+    clientName:"", clientCif:"",
+    communication:null, contactMobile:"", contactRemarks:"", commMode:"", communicationDetails:"",
+    collected:null, collectedAmount:"", collectionModality:"", collectionModalityOther:"",
+    committedAnother:null, nextCommitmentDate:""
+  };
+}
+
+Screens.collectionForm = (main)=>{
+  const clients = App.state.clients;
+  main.classList.add("with-actionbar");
+  let html = `
+    <h2>Collection entry</h2>
+    <p class="meta-line">${esc(App.state.officerName)} · CIF ${App.state.cif}</p>
+    <div class="progress-row">${clients.map(()=>'<div class="seg filled"></div>').join('')}</div>
+  `;
+  clients.forEach((c, i)=>{ html += renderCollectionCard(c, i, clients.length); });
+  main.innerHTML = html;
+  clients.forEach((c,i)=>bindCollectionCard(main, c, i));
+
+  const actionBar = document.getElementById("actionBar");
+  const inner = document.getElementById("actionBarInner");
+  actionBar.hidden = false;
+  inner.innerHTML = `
+    <button class="btn btn-dashed" id="addClientBtn">+ Visited another client</button>
+    <button class="btn btn-primary" id="submitBtn">Submit entry</button>
+  `;
+  inner.querySelector("#addClientBtn").onclick = ()=>{
+    App.state.clients.push(blankCollectionClient());
+    App.render();
+    window.scrollTo(0, document.body.scrollHeight);
+  };
+  inner.querySelector("#submitBtn").onclick = ()=>submitCollection();
+};
+
+function renderCollectionCard(c, i, total){
+  return `
+  <div class="client-card" data-idx="${i}">
+    <div class="card-head">
+      <div class="num"><span class="dot">${i+1}</span> Client ${i+1}</div>
+      ${total > 1 ? `<button class="btn-link-danger" data-remove="${i}">Remove</button>` : ''}
+    </div>
+
+    <div class="field" data-f="clientName">
+      <label>Client name</label>
+      <input type="text" data-field="clientName" value="${esc(c.clientName)}" placeholder="Full name">
+      <div class="error-text">Enter the client's name.</div>
+    </div>
+
+    <div class="field" data-f="clientCif">
+      <label>Client CIF</label>
+      <input type="tel" inputmode="numeric" maxlength="6" data-field="clientCif" value="${esc(c.clientCif)}" placeholder="6-digit CIF">
+      <div class="error-text">Enter a valid 6-digit CIF.</div>
+    </div>
+
+    <div class="field" data-f="communication">
+      <label>Communication with client?</label>
+      <div class="segmented" data-seg="communication">
+        <button type="button" data-val="yes" class="${c.communication==='yes'?'active yes':''}">Yes</button>
+        <button type="button" data-val="no" class="${c.communication==='no'?'active no':''}">No</button>
+      </div>
+    </div>
+
+    <div class="conditional" data-cond="communication" ${c.communication!=='yes' ? 'hidden':''}>
+      <div class="field" data-f="contactMobile">
+        <label>Mobile of communicated party</label>
+        <input type="tel" inputmode="numeric" maxlength="11" data-field="contactMobile" value="${esc(c.contactMobile)}" placeholder="01XXXXXXXXX">
+        <div class="error-text">Enter a valid 11-digit mobile number.</div>
+      </div>
+      <div class="field" data-f="commMode">
+        <label>Communication mode</label>
+        <select data-field="commMode">
+          <option value="">Select mode</option>
+          <option value="Physical Visit" ${c.commMode==='Physical Visit'?'selected':''}>Physical Visit</option>
+          <option value="Phone Call" ${c.commMode==='Phone Call'?'selected':''}>Phone Call</option>
+          <option value="Text (Via WhatsApp/Messenger etc.)" ${c.commMode==='Text (Via WhatsApp/Messenger etc.)'?'selected':''}>Text (Via WhatsApp/Messenger etc.)</option>
+          <option value="Others" ${c.commMode==='Others'?'selected':''}>Others</option>
+        </select>
+        <div class="error-text">Select a communication mode.</div>
+      </div>
+      <div class="field" data-f="communicationDetails">
+        <label>Communication with client (details)</label>
+        <input type="text" data-field="communicationDetails" value="${esc(c.communicationDetails)}" placeholder="What was communicated / discussed">
+        <div class="error-text">Enter what was communicated.</div>
+      </div>
+      <div class="field" data-f="contactRemarks" style="margin-bottom:0;">
+        <label>Remarks on communicated party</label>
+        <input type="text" data-field="contactRemarks" value="${esc(c.contactRemarks)}" placeholder="Optional notes">
+      </div>
+    </div>
+
+    <div class="field" data-f="collected">
+      <label>Collected from client?</label>
+      <div class="segmented" data-seg="collected">
+        <button type="button" data-val="yes" class="${c.collected==='yes'?'active yes':''}">Yes</button>
+        <button type="button" data-val="no" class="${c.collected==='no'?'active no':''}">No</button>
+      </div>
+    </div>
+
+    <div class="conditional" data-cond="collected" ${c.collected!=='yes' ? 'hidden':''}>
+      <div class="field" data-f="collectedAmount">
+        <label>Collected amount</label>
+        <div class="amount-wrap">
+          <span class="currency">৳</span>
+          <input type="number" inputmode="decimal" min="0" step="0.01" data-field="collectedAmount" value="${esc(c.collectedAmount)}" placeholder="0.00">
+        </div>
+        <div class="error-text">Enter a valid amount.</div>
+      </div>
+      <div class="field" data-f="collectionModality">
+        <label>Collection modality</label>
+        <select data-field="collectionModality">
+          <option value="">Select modality</option>
+          <option value="Cash" ${c.collectionModality==='Cash'?'selected':''}>Cash</option>
+          <option value="Bank Transfer" ${c.collectionModality==='Bank Transfer'?'selected':''}>Bank Transfer</option>
+          <option value="Mobile Banking" ${c.collectionModality==='Mobile Banking'?'selected':''}>Mobile Banking</option>
+          <option value="Cheque" ${c.collectionModality==='Cheque'?'selected':''}>Cheque</option>
+          <option value="Others" ${c.collectionModality==='Others'?'selected':''}>Others</option>
+        </select>
+        <div class="error-text">Select a collection modality.</div>
+      </div>
+      <div class="field" data-f="collectionModalityOther" ${c.collectionModality!=='Others' ? 'hidden':''} style="margin-bottom:0;">
+        <label>Please specify</label>
+        <input type="text" data-field="collectionModalityOther" value="${esc(c.collectionModalityOther)}" placeholder="Describe the collection modality">
+        <div class="error-text">Please specify the modality.</div>
+      </div>
+    </div>
+
+    <div class="field" data-f="committedAnother">
+      <label>Client committed another date?</label>
+      <div class="segmented" data-seg="committedAnother">
+        <button type="button" data-val="yes" class="${c.committedAnother==='yes'?'active yes':''}">Yes</button>
+        <button type="button" data-val="no" class="${c.committedAnother==='no'?'active no':''}">No</button>
+      </div>
+    </div>
+
+    <div class="conditional" data-cond="committedAnother" ${c.committedAnother!=='yes' ? 'hidden':''} style="margin-bottom:0;">
+      <div class="field" data-f="nextCommitmentDate" style="margin-bottom:0;">
+        <label>Next commitment date</label>
+        <input type="date" data-field="nextCommitmentDate" value="${esc(c.nextCommitmentDate)}">
+        <div class="error-text">Choose a future date.</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Toggles a Yes/No segmented control WITHOUT a full App.render() —
+// re-rendering the whole form on every tap was resetting scroll position
+// and making people feel like they'd "lost their place". This updates only
+// the button states and shows/hides the one conditional block that depends
+// on it, in place, with no scroll jump and no other field touched.
+function setSegmentedValue(card, segName, condName, value, stateObj, stateKey){
+  stateObj[stateKey] = value;
+  const seg = card.querySelector(`[data-seg="${segName}"]`);
+  seg.querySelectorAll("button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.val === value);
+    b.classList.toggle("yes", b.dataset.val === value && b.dataset.val === "yes");
+    b.classList.toggle("no", b.dataset.val === value && b.dataset.val === "no");
+  });
+  if(condName){
+    const cond = card.querySelector(`[data-cond="${condName}"]`);
+    if(cond) cond.hidden = (value !== "yes");
+  }
+  // Clear any stale invalid-state styling on the segmented field itself
+  // once a value is chosen — it was flagged red before a choice was made.
+  const field = card.querySelector(`[data-f="${segName}"]`);
+  if(field) field.classList.remove("invalid");
+}
+
+function bindCollectionCard(main, c, i){
+  const card = main.querySelector(`.client-card[data-idx="${i}"]`);
+  if(!card) return;
+  card.querySelectorAll("input[data-field], select[data-field]").forEach(el=>{
+    el.addEventListener("input", ()=>{ c[el.dataset.field] = el.value; });
+  });
+
+  // Collection modality "Others" reveals a free-text field in place —
+  // same in-place pattern as the Yes/No toggles, no full re-render.
+  const modalitySelect = card.querySelector('select[data-field="collectionModality"]');
+  if(modalitySelect){
+    modalitySelect.addEventListener("change", ()=>{
+      const otherField = card.querySelector('[data-f="collectionModalityOther"]');
+      if(otherField) otherField.hidden = (modalitySelect.value !== "Others");
+    });
+  }
+
+  card.querySelectorAll('[data-seg="communication"] button').forEach(b=>{
+    b.onclick = ()=>setSegmentedValue(card, "communication", "communication", b.dataset.val, c, "communication");
+  });
+  card.querySelectorAll('[data-seg="collected"] button').forEach(b=>{
+    b.onclick = ()=>setSegmentedValue(card, "collected", "collected", b.dataset.val, c, "collected");
+  });
+  card.querySelectorAll('[data-seg="committedAnother"] button').forEach(b=>{
+    b.onclick = ()=>setSegmentedValue(card, "committedAnother", "committedAnother", b.dataset.val, c, "committedAnother");
+  });
+  const removeBtn = card.querySelector('[data-remove]');
+  if(removeBtn){ removeBtn.onclick = ()=>{ App.state.clients.splice(i,1); App.render(); }; }
+
+  // Make the whole date field open the picker, not just the small icon —
+  // showPicker() is the explicit API for this; fall back to focus() where unsupported.
+  const dateInput = card.querySelector('input[type="date"]');
+  if(dateInput){
+    dateInput.addEventListener("click", ()=>{
+      if(typeof dateInput.showPicker === "function"){
+        try{ dateInput.showPicker(); }catch(e){ dateInput.focus(); }
+      }
+    });
+  }
+}
+
+function validateCollectionClient(c, cardEl){
+  let ok = true;
+  const mark = (fieldName, valid)=>{
+    const f = cardEl.querySelector(`[data-f="${fieldName}"]`);
+    if(!f) return;
+    f.classList.toggle("invalid", !valid);
+    if(!valid) ok = false;
+  };
+  mark("clientName", V.nonEmpty(c.clientName));
+  mark("clientCif", V.cif(c.clientCif));
+  mark("communication", c.communication === "yes" || c.communication === "no");
+  if(c.communication === "yes"){
+    mark("contactMobile", V.mobileBD(c.contactMobile));
+    mark("commMode", V.nonEmpty(c.commMode));
+    mark("communicationDetails", V.nonEmpty(c.communicationDetails));
+  }
+  mark("collected", c.collected === "yes" || c.collected === "no");
+  if(c.collected === "yes"){
+    mark("collectedAmount", V.amount(c.collectedAmount));
+    mark("collectionModality", V.nonEmpty(c.collectionModality));
+    if(c.collectionModality === "Others"){
+      mark("collectionModalityOther", V.nonEmpty(c.collectionModalityOther));
+    }
+  }
+  mark("committedAnother", c.committedAnother === "yes" || c.committedAnother === "no");
+  if(c.committedAnother === "yes"){
+    mark("nextCommitmentDate", V.futureDate(c.nextCommitmentDate));
+  }
+  return ok;
+}
+
+async function submitCollection(){
+  const main = document.getElementById("main");
+  let allValid = true;
+  App.state.clients.forEach((c,i)=>{
+    const card = main.querySelector(`.client-card[data-idx="${i}"]`);
+    if(!validateCollectionClient(c, card)) allValid = false;
+  });
+  if(!allValid){
+    toast("Please fix the highlighted fields.");
+    const firstInvalid = main.querySelector(".field.invalid");
+    if(firstInvalid) firstInvalid.scrollIntoView({behavior:"smooth", block:"center"});
+    return;
+  }
+  Modals.confirmSubmit("collection", async ()=>{
+    const timestamp = fmtTimestamp();
+    const visitId = await addRecordAutoIncrement("collection_visits", {
+      timestamp, officer_cif: App.state.cif, officer_name: App.state.officerName
+    });
+    for(let i=0;i<App.state.clients.length;i++){
+      const c = App.state.clients[i];
+      await addRecordAutoIncrement("collection_clients", {
+        visit_id: visitId, seq: i+1,
+        client_name: c.clientName, client_cif: c.clientCif,
+        communication: c.communication,
+        contact_mobile: c.communication==='yes' ? c.contactMobile : "",
+        contact_remarks: c.communication==='yes' ? c.contactRemarks : "",
+        comm_mode: c.communication==='yes' ? c.commMode : "",
+        communication_details: c.communication==='yes' ? c.communicationDetails : "",
+        collected: c.collected,
+        collected_amount: c.collected==='yes' ? c.collectedAmount : "",
+        collection_modality: c.collected==='yes'
+          ? (c.collectionModality === "Others" ? c.collectionModalityOther : c.collectionModality)
+          : "",
+        committed_another_date: c.committedAnother,
+        next_commitment_date: c.committedAnother==='yes' ? c.nextCommitmentDate : ""
+      });
+    }
+    App.goTo("success", { lastFormType:"collection", lastCount: App.state.clients.length });
+  });
+}
+
+/* =========================================================================
+   RM ACTIVITY FORM
+   ========================================================================= */
+function blankActivityClient(){ return { clientName:"", clientPhone:"", visitPurpose:"" }; }
+
+Screens.activityForm = (main)=>{
+  const clients = App.state.clients;
+  main.classList.add("with-actionbar");
+  let html = `
+    <h2>RM activity entry</h2>
+    <p class="meta-line">${esc(App.state.officerName)} · CIF ${App.state.cif}</p>
+    <div class="progress-row">${clients.map(()=>'<div class="seg filled"></div>').join('')}</div>
+  `;
+  clients.forEach((c, i)=>{ html += renderActivityCard(c, i, clients.length); });
+  main.innerHTML = html;
+  clients.forEach((c,i)=>bindActivityCard(main, c, i));
+
+  const actionBar = document.getElementById("actionBar");
+  const inner = document.getElementById("actionBarInner");
+  actionBar.hidden = false;
+  inner.innerHTML = `
+    <button class="btn btn-dashed" id="addClientBtn">+ Visited another client</button>
+    <button class="btn btn-primary" id="submitBtn">Submit entry</button>
+  `;
+  inner.querySelector("#addClientBtn").onclick = ()=>{
+    App.state.clients.push(blankActivityClient());
+    App.render();
+    window.scrollTo(0, document.body.scrollHeight);
+  };
+  inner.querySelector("#submitBtn").onclick = ()=>submitActivity();
+};
+
+function renderActivityCard(c, i, total){
+  return `
+  <div class="client-card" data-idx="${i}">
+    <div class="card-head">
+      <div class="num"><span class="dot">${i+1}</span> Client ${i+1}</div>
+      ${total > 1 ? `<button class="btn-link-danger" data-remove="${i}">Remove</button>` : ''}
+    </div>
+    <div class="field" data-f="clientName">
+      <label>Client name</label>
+      <input type="text" data-field="clientName" value="${esc(c.clientName)}" placeholder="Full name">
+      <div class="error-text">Enter the client's name.</div>
+    </div>
+    <div class="field" data-f="clientPhone">
+      <label>Client phone number</label>
+      <input type="tel" inputmode="numeric" maxlength="11" data-field="clientPhone" value="${esc(c.clientPhone)}" placeholder="01XXXXXXXXX">
+      <div class="error-text">Enter a valid 11-digit mobile number.</div>
+    </div>
+    <div class="field" data-f="visitPurpose" style="margin-bottom:0;">
+      <label>Visit purpose</label>
+      <input type="text" data-field="visitPurpose" value="${esc(c.visitPurpose)}" placeholder="e.g. New lead, follow-up, document collection">
+      <div class="error-text">Enter the visit purpose.</div>
+    </div>
+  </div>`;
+}
+
+function bindActivityCard(main, c, i){
+  const card = main.querySelector(`.client-card[data-idx="${i}"]`);
+  if(!card) return;
+  card.querySelectorAll("input[data-field], select[data-field]").forEach(el=>{
+    el.addEventListener("input", ()=>{ c[el.dataset.field] = el.value; });
+  });
+  const removeBtn = card.querySelector('[data-remove]');
+  if(removeBtn){ removeBtn.onclick = ()=>{ App.state.clients.splice(i,1); App.render(); }; }
+}
+
+function validateActivityClient(c, cardEl){
+  let ok = true;
+  const mark = (fieldName, valid)=>{
+    const f = cardEl.querySelector(`[data-f="${fieldName}"]`);
+    if(!f) return;
+    f.classList.toggle("invalid", !valid);
+    if(!valid) ok = false;
+  };
+  mark("clientName", V.nonEmpty(c.clientName));
+  mark("clientPhone", V.mobileBD(c.clientPhone));
+  mark("visitPurpose", V.nonEmpty(c.visitPurpose));
+  return ok;
+}
+
+async function submitActivity(){
+  const main = document.getElementById("main");
+  let allValid = true;
+  App.state.clients.forEach((c,i)=>{
+    const card = main.querySelector(`.client-card[data-idx="${i}"]`);
+    if(!validateActivityClient(c, card)) allValid = false;
+  });
+  if(!allValid){
+    toast("Please fix the highlighted fields.");
+    const firstInvalid = main.querySelector(".field.invalid");
+    if(firstInvalid) firstInvalid.scrollIntoView({behavior:"smooth", block:"center"});
+    return;
+  }
+  Modals.confirmSubmit("activity", async ()=>{
+    const timestamp = fmtTimestamp();
+    const visitId = await addRecordAutoIncrement("activity_visits", {
+      timestamp, rm_cif: App.state.cif, rm_name: App.state.officerName
+    });
+    for(let i=0;i<App.state.clients.length;i++){
+      const c = App.state.clients[i];
+      await addRecordAutoIncrement("activity_clients", {
+        visit_id: visitId, seq: i+1,
+        client_name: c.clientName, client_phone: c.clientPhone, visit_purpose: c.visitPurpose
+      });
+    }
+    App.goTo("success", { lastFormType:"activity", lastCount: App.state.clients.length });
+  });
+}
+
+/* =========================================================================
+   SUCCESS SCREEN
+   ========================================================================= */
+Screens.success = (main)=>{
+  const label = App.state.lastFormType === "collection" ? "Collection" : "RM Activity";
+  main.innerHTML = `
+    <div class="success-wrap">
+      <div class="success-badge">✓</div>
+      <h1>Entry submitted</h1>
+      <p class="lede">${App.state.lastCount} client ${App.state.lastCount===1?'record':'records'} logged to the ${label} form.</p>
+      <button class="btn btn-primary" id="newEntryBtn" style="max-width:240px;">New entry</button>
+    </div>
+  `;
+  main.querySelector("#newEntryBtn").onclick = ()=>App.resetAll();
+};
+
+/* ---------- util ---------- */
+function esc(s){
+  return (s==null?"":String(s)).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ---------- boot ---------- */
+App.init();
+</script>
+</body>
+</html>

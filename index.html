@@ -954,7 +954,47 @@ const Modals = {
       </div>
     `);
     document.getElementById("csNo").onclick = ()=>Modals.hide();
-    document.getElementById("csYes").onclick = ()=>{ Modals.hide(); onConfirm(); };
+
+    const yesBtn = document.getElementById("csYes");
+    const noBtn = document.getElementById("csNo");
+    yesBtn.onclick = async ()=>{
+      // Previously this closed the modal and called onConfirm() with zero
+      // error handling — if the database write failed for any reason
+      // (network, a bad column value, anything), the whole thing died
+      // silently and the page just sat there with no explanation. Now the
+      // modal stays open with a loading state while writing, and any
+      // failure is shown directly instead of vanishing.
+      yesBtn.disabled = true;
+      noBtn.disabled = true;
+      yesBtn.textContent = "Submitting...";
+      try{
+        await onConfirm();
+        Modals.hide();
+      }catch(err){
+        console.error("Submit failed:", err);
+        yesBtn.disabled = false;
+        noBtn.disabled = false;
+        yesBtn.textContent = "Yes, submit";
+        Modals.hide();
+        Modals.submitError(err);
+      }
+    };
+  },
+
+  submitError(err){
+    const message = (err && err.message) ? err.message : "Unknown error.";
+    this.show(`
+      <div class="modal-icon danger">!</div>
+      <h3>Submission failed</h3>
+      <p>Your entry was NOT saved. Nothing was lost on this screen — you can try again.</p>
+      <p style="font-size:11.5px;color:hsl(var(--muted-foreground));background:hsl(var(--muted));padding:10px 12px;border-radius:calc(var(--radius) - 3px);word-break:break-word;margin-bottom:18px;">
+        ${esc(message)}
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="seOk">OK</button>
+      </div>
+    `);
+    document.getElementById("seOk").onclick = ()=>Modals.hide();
   }
 };
 

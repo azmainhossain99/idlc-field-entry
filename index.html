@@ -506,21 +506,42 @@ async function getRecord(storeName, key){
   return data && data[0] ? data[0] : undefined;
 }
 
-// Insert a new record and return its generated id (for visit/client tables,
-// which use Postgres's generated-always-as-identity auto-increment).
+// Generates a random UUID for a new row's id, using the browser's built-in
+// crypto API (no library needed — supported in every modern browser).
+function generateId(){
+  if(window.crypto && typeof window.crypto.randomUUID === "function"){
+    return window.crypto.randomUUID();
+  }
+  // Fallback for older browsers without crypto.randomUUID — still a
+  // perfectly good random v4-style UUID, just assembled manually.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c=>{
+    const r = Math.random()*16|0;
+    const v = c === "x" ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Insert a new record. The id is generated HERE, client-side, and sent as
+// part of the insert — not handed back by Postgres. This is deliberate:
+// it means these tables need no SELECT policy for the public key at all
+// (true insert-only), closing off the ability for the public key to read
+// back any submitted data, which a "return the inserted row" approach
+// would otherwise require. Prefer: return=minimal means no response body
+// is requested, so there's nothing to read even if a policy slipped.
 async function addRecordAutoIncrement(storeName, record){
   const { table, pk } = TABLE_MAP[storeName];
+  const id = generateId();
+  const payload = Object.assign({ [pk]: id }, record);
   const res = await fetch(`${REST_BASE}/${table}`, {
     method: "POST",
-    headers: supabaseHeaders({ "Prefer": "return=representation" }),
-    body: JSON.stringify(record)
+    headers: supabaseHeaders({ "Prefer": "return=minimal" }),
+    body: JSON.stringify(payload)
   });
   if(!res.ok){
     const errText = await res.text();
     throw new Error(`addRecordAutoIncrement failed (${table}): ${res.status} ${errText}`);
   }
-  const data = await res.json();
-  return data && data[0] ? data[0][pk] : null;
+  return id;
 }
 
 /* No local seeding needed anymore — the real roster lives in Supabase.

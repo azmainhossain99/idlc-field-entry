@@ -1075,7 +1075,7 @@ function renderCollectionCard(c, i, total){
     <div class="field" data-f="clientCif">
       <label>Client CIF</label>
       <input type="tel" inputmode="numeric" maxlength="6" data-field="clientCif" value="${esc(c.clientCif)}" placeholder="6-digit CIF">
-      <div class="error-text">Enter a valid 6-digit CIF.</div>
+      <div class="error-text" data-err="clientCif">Enter a valid 6-digit CIF.</div>
     </div>
 
     <div class="field" data-f="communication">
@@ -1230,6 +1230,27 @@ function bindCollectionCard(main, c, i){
       }
     });
   }
+
+  // Live check as the officer types the client's CIF — warns immediately
+  // if it matches their own CIF, rather than only catching it at submit.
+  const clientCifInput = card.querySelector('input[data-field="clientCif"]');
+  if(clientCifInput){
+    clientCifInput.addEventListener("input", ()=>{
+      const field = card.querySelector('[data-f="clientCif"]');
+      const errEl = card.querySelector('[data-err="clientCif"]');
+      if(!field || !errEl) return;
+      const val = clientCifInput.value.trim();
+      const isSelf = V.cif(val) && val === String(App.state.cif).trim();
+      if(isSelf){
+        errEl.textContent = "This matches your own CIF — a client can't be the submitting officer.";
+        field.classList.add("invalid");
+      } else {
+        // Clear the live warning once it's no longer a self-match; the
+        // normal format validation still runs again at submit time.
+        field.classList.remove("invalid");
+      }
+    });
+  }
 }
 
 function validateCollectionClient(c, cardEl){
@@ -1241,7 +1262,21 @@ function validateCollectionClient(c, cardEl){
     if(!valid) ok = false;
   };
   mark("clientName", V.nonEmpty(c.clientName));
-  mark("clientCif", V.cif(c.clientCif));
+
+  // Client CIF: valid format AND must not match the submitting officer's
+  // own CIF — an officer entering themself as the client is either a
+  // mistake or a way to fabricate a fake visit, so this blocks submission
+  // either way rather than just warning.
+  const cifFormatOk = V.cif(c.clientCif);
+  const cifIsSelf = cifFormatOk && c.clientCif.trim() === String(App.state.cif).trim();
+  const cifErrorEl = cardEl.querySelector('[data-err="clientCif"]');
+  if(cifErrorEl){
+    cifErrorEl.textContent = cifIsSelf
+      ? "This matches your own CIF — a client can't be the submitting officer."
+      : "Enter a valid 6-digit CIF.";
+  }
+  mark("clientCif", cifFormatOk && !cifIsSelf);
+
   mark("communication", c.communication === "yes" || c.communication === "no");
   if(c.communication === "yes"){
     mark("contactMobile", V.mobileBD(c.contactMobile));

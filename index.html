@@ -752,6 +752,14 @@ Screens.cif = (main)=>{
       Modals.unrecognizedCIF(cif, meta.expectedRole);
       return;
     }
+    // A blocked CIF (e.g. an employee who has left) is checked before the
+    // role-match check — being blocked takes priority over everything
+    // else, and there is no override or "continue anyway" path for it,
+    // unlike the role-mismatch warning.
+    if(rosterEntry.status === "blocked"){
+      Modals.cifBlocked(rosterEntry, cif);
+      return;
+    }
     if(rosterEntry.role !== meta.expectedRole){
       Modals.roleMismatch(rosterEntry, meta, cif);
       return;
@@ -852,6 +860,21 @@ const Modals = {
       Modals.hide();
       proceedToForm(cif, rosterEntry.name);
     };
+  },
+
+  cifBlocked(rosterEntry, cif){
+    // Deliberately no "continue anyway" option here, unlike roleMismatch —
+    // a blocked CIF (e.g. someone who has left the company) should have no
+    // bypass at all. The only path forward is contacting an administrator.
+    this.show(`
+      <div class="modal-icon danger">⛔</div>
+      <h3>This CIF is blocked</h3>
+      <p>CIF <strong>${cif}</strong> (${esc(rosterEntry.name)}) is no longer active and cannot submit entries. If this is a mistake, contact your administrator.</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="cbOk">OK</button>
+      </div>
+    `);
+    document.getElementById("cbOk").onclick = ()=>Modals.hide();
   },
 
   unrecognizedCIF(cif, expectedRole){

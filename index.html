@@ -878,93 +878,19 @@ const Modals = {
   },
 
   unrecognizedCIF(cif, expectedRole){
+    // Self-registration has been removed entirely — an unrecognized CIF is
+    // now a hard stop with no path forward from this screen. Someone in
+    // this state needs to be added to the roster by whoever manages it
+    // before they can submit anything.
     this.show(`
-      <div class="modal-icon">?</div>
+      <div class="modal-icon danger">⛔</div>
       <h3>CIF not recognized</h3>
-      <p>CIF <strong>${cif}</strong> isn't in the current roster. Try again, or register it now to continue.</p>
+      <p>CIF <strong>${cif}</strong> isn't in the current roster. You can't register yourself — contact your administrator to be added before you can submit entries.</p>
       <div class="modal-actions">
-        <button class="btn btn-primary" id="unrRegister">Register as new</button>
-        <button class="btn btn-outline" id="unrTry">Try again</button>
+        <button class="btn btn-primary" id="unrOk">OK</button>
       </div>
     `);
-    document.getElementById("unrTry").onclick = ()=>Modals.hide();
-    document.getElementById("unrRegister").onclick = ()=>{
-      Modals.hide();
-      Modals.registerForm(cif, expectedRole);
-    };
-  },
-
-  registerForm(cif, expectedRole){
-    this.show(`
-      <h3>Quick registration</h3>
-      <p>Enough to get you moving — this is flagged for review, not auto-confirmed.</p>
-      <div class="field" id="regCifField">
-        <label>CIF</label>
-        <input type="tel" id="regCif" inputmode="numeric" maxlength="6" value="${cif}">
-        <div class="error-text" id="regCifError">Enter a valid 6-digit CIF.</div>
-      </div>
-      <div class="field" id="regNameField">
-        <label>Your name</label>
-        <input type="text" id="regName" placeholder="Full name">
-        <div class="error-text">Enter your name.</div>
-      </div>
-      <div class="field" style="margin-bottom:18px;">
-        <label>Role</label>
-        <div class="segmented" id="regRoleSeg">
-          <button type="button" data-role="collection" class="${expectedRole==='collection'?'active':''}">Collection Officer</button>
-          <button type="button" data-role="rm" class="${expectedRole==='rm'?'active':''}">RM</button>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" id="regSubmit">Register &amp; continue</button>
-        <button class="btn btn-ghost" id="regCancel">Cancel</button>
-      </div>
-    `);
-
-    let regRole = expectedRole;
-    const seg = document.getElementById("regRoleSeg");
-    seg.querySelectorAll("button").forEach(b=>{
-      b.onclick = ()=>{
-        seg.querySelectorAll("button").forEach(x=>x.classList.remove("active"));
-        b.classList.add("active");
-        regRole = b.dataset.role;
-      };
-    });
-
-    document.getElementById("regCancel").onclick = ()=>Modals.hide();
-    document.getElementById("regSubmit").onclick = async ()=>{
-      const cifF = document.getElementById("regCifField");
-      const nameF = document.getElementById("regNameField");
-      const cifInput = document.getElementById("regCif");
-      const nameInput = document.getElementById("regName");
-      const cifErrorText = document.getElementById("regCifError");
-      cifF.classList.remove("invalid"); nameF.classList.remove("invalid");
-      cifErrorText.textContent = "Enter a valid 6-digit CIF.";
-
-      let ok = true;
-      if(!V.cif(cifInput.value)){ cifF.classList.add("invalid"); ok=false; }
-      if(!V.nonEmpty(nameInput.value)){ nameF.classList.add("invalid"); ok=false; }
-      if(!ok) return;
-
-      const typedCif = cifInput.value.trim();
-
-      // Guard: re-check the roster for this exact CIF right before writing.
-      // Covers both the CIF that triggered "not recognized" AND any CIF the
-      // person edits it to in this form — never silently overwrite an
-      // existing roster entry (confirmed OR a prior self-registration).
-      const existing = await getRecord("roster", typedCif);
-      if(existing){
-        cifF.classList.add("invalid");
-        cifErrorText.textContent = `CIF ${typedCif} is already registered to ${existing.name}. Go back and try your CIF again, or use a different one.`;
-        return;
-      }
-
-      const entry = { cif: typedCif, name: nameInput.value.trim(), role: regRole, status: "self_registered" };
-      await putRecord("roster", entry);
-      Modals.hide();
-      toast("Registered — pending review.");
-      proceedToForm(entry.cif, entry.name);
-    };
+    document.getElementById("unrOk").onclick = ()=>Modals.hide();
   },
 
   confirmSubmit(formType, onConfirm){
@@ -1387,6 +1313,21 @@ Screens.activityForm = (main)=>{
     <button class="btn btn-primary" id="submitBtn">Submit entry</button>
   `;
   inner.querySelector("#addClientBtn").onclick = ()=>{
+    // Require the MOST RECENT client card to be fully valid before a new
+    // one can be opened — this is what actually enforces "can't jump to
+    // Client 3 without finishing Client 2 first". Previously this button
+    // had no such check, so every prior card could be left empty while
+    // new ones kept getting added.
+    const lastIdx = App.state.clients.length - 1;
+    const lastCard = main.querySelector(`.client-card[data-idx="${lastIdx}"]`);
+    const lastClient = App.state.clients[lastIdx];
+    const isValid = validateActivityClient(lastClient, lastCard);
+    if(!isValid){
+      toast(`Please complete Client ${lastIdx + 1} before adding another.`);
+      const firstInvalid = lastCard.querySelector(".field.invalid");
+      if(firstInvalid) firstInvalid.scrollIntoView({behavior:"smooth", block:"center"});
+      return;
+    }
     App.state.clients.push(blankActivityClient());
     App.render();
     window.scrollTo(0, document.body.scrollHeight);

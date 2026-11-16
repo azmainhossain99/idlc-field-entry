@@ -974,7 +974,7 @@ const Modals = {
 function blankCollectionClient(){
   return {
     clientName:"", clientCif:"",
-    communication:null, contactMobile:"", contactRemarks:"", commMode:"", communicationDetails:"",
+    contactMobile:"", contactRemarks:"", commMode:"", communicationDetails:"", communicationDetailsOther:"",
     collected:null, collectedAmount:"", collectionModality:"", collectionModalityOther:"",
     committedAnother:null, nextCommitmentDate:""
   };
@@ -1027,43 +1027,48 @@ function renderCollectionCard(c, i, total){
       <div class="error-text" data-err="clientCif">Enter a valid 6-digit CIF.</div>
     </div>
 
-    <div class="field" data-f="communication">
-      <label>Communication with client?</label>
-      <div class="segmented" data-seg="communication">
-        <button type="button" data-val="yes" class="${c.communication==='yes'?'active yes':''}">Yes</button>
-        <button type="button" data-val="no" class="${c.communication==='no'?'active no':''}">No</button>
-      </div>
+    <div class="field" data-f="contactMobile">
+      <label>Mobile of communicated party</label>
+      <input type="tel" inputmode="numeric" maxlength="11" data-field="contactMobile" value="${esc(c.contactMobile)}" placeholder="01XXXXXXXXX">
+      <div class="error-text">Enter a valid 11-digit mobile number.</div>
     </div>
 
-    <div class="conditional" data-cond="communication" ${c.communication!=='yes' ? 'hidden':''}>
-      <div class="field" data-f="contactMobile">
-        <label>Mobile of communicated party</label>
-        <input type="tel" inputmode="numeric" maxlength="11" data-field="contactMobile" value="${esc(c.contactMobile)}" placeholder="01XXXXXXXXX">
-        <div class="error-text">Enter a valid 11-digit mobile number.</div>
-      </div>
-      <div class="field" data-f="commMode">
-        <label>Communication mode</label>
-        <select data-field="commMode">
-          <option value="">Select mode</option>
-          <option value="Physical Visit" ${c.commMode==='Physical Visit'?'selected':''}>Physical Visit</option>
-          <option value="Phone Call" ${c.commMode==='Phone Call'?'selected':''}>Phone Call</option>
-          <option value="Text (Via WhatsApp/Messenger etc.)" ${c.commMode==='Text (Via WhatsApp/Messenger etc.)'?'selected':''}>Text (Via WhatsApp/Messenger etc.)</option>
-          <option value="Others" ${c.commMode==='Others'?'selected':''}>Others</option>
-        </select>
-        <div class="error-text">Select a communication mode.</div>
-      </div>
-      <div class="field" data-f="communicationDetails">
-        <label>Communication with client (details)</label>
-        <input type="text" data-field="communicationDetails" value="${esc(c.communicationDetails)}" placeholder="What was communicated / discussed">
-        <div class="error-text">Enter what was communicated.</div>
-      </div>
-      <div class="field" data-f="contactRemarks" style="margin-bottom:0;">
-        <label>Remarks on communicated party</label>
-        <input type="text" data-field="contactRemarks" value="${esc(c.contactRemarks)}" placeholder="Optional notes">
-      </div>
+    <div class="field" data-f="commMode">
+      <label>Communication mode</label>
+      <select data-field="commMode">
+        <option value="">Select mode</option>
+        <option value="Physical Visit" ${c.commMode==='Physical Visit'?'selected':''}>Physical Visit</option>
+        <option value="Phone Call" ${c.commMode==='Phone Call'?'selected':''}>Phone Call</option>
+        <option value="Text (Via WhatsApp/Messenger etc.)" ${c.commMode==='Text (Via WhatsApp/Messenger etc.)'?'selected':''}>Text (Via WhatsApp/Messenger etc.)</option>
+        <option value="Others" ${c.commMode==='Others'?'selected':''}>Others</option>
+      </select>
+      <div class="error-text">Select a communication mode.</div>
     </div>
 
-    <div class="field" data-f="collected">
+    <div class="field" data-f="communicationDetails">
+      <label>Communication with client ?*</label>
+      <select data-field="communicationDetails">
+        <option value="">Select option</option>
+        <option value="Client" ${c.communicationDetails==='Client'?'selected':''}>Client</option>
+        <option value="PG" ${c.communicationDetails==='PG'?'selected':''}>PG</option>
+        <option value="Client & PG" ${c.communicationDetails==='Client & PG'?'selected':''}>Client &amp; PG</option>
+        <option value="Others" ${c.communicationDetails==='Others'?'selected':''}>Others</option>
+      </select>
+      <div class="error-text">Select who was communicated with.</div>
+    </div>
+
+    <div class="field" data-f="communicationDetailsOther" ${c.communicationDetails!=='Others' ? 'hidden':''}>
+      <label>Please specify</label>
+      <input type="text" data-field="communicationDetailsOther" value="${esc(c.communicationDetailsOther)}" placeholder="Specify communicated party">
+      <div class="error-text">Please specify who was communicated with.</div>
+    </div>
+
+    <div class="field" data-f="contactRemarks">
+      <label>Remarks on communicated party</label>
+      <input type="text" data-field="contactRemarks" value="${esc(c.contactRemarks)}" placeholder="Optional notes">
+    </div>
+
+    <div class="field" data-f="collected" style="${c.collected==='no' || c.collected==='yes' ? '' : 'margin-bottom:0;'}">
       <label>Collected from client?</label>
       <div class="segmented" data-seg="collected">
         <button type="button" data-val="yes" class="${c.collected==='yes'?'active yes':''}">Yes</button>
@@ -1071,7 +1076,7 @@ function renderCollectionCard(c, i, total){
       </div>
     </div>
 
-    <div class="conditional" data-cond="collected" ${c.collected!=='yes' ? 'hidden':''}>
+    <div class="conditional" data-cond="collected" ${c.collected!=='yes' ? 'hidden':''} style="margin-bottom:0;">
       <div class="field" data-f="collectedAmount">
         <label>Collected amount</label>
         <div class="amount-wrap">
@@ -1080,7 +1085,7 @@ function renderCollectionCard(c, i, total){
         </div>
         <div class="error-text">Enter a valid amount.</div>
       </div>
-      <div class="field" data-f="collectionModality">
+      <div class="field" data-f="collectionModality" style="${c.collectionModality==='Others' ? '' : 'margin-bottom:0;'}">
         <label>Collection modality</label>
         <select data-field="collectionModality">
           <option value="">Select modality</option>
@@ -1099,19 +1104,21 @@ function renderCollectionCard(c, i, total){
       </div>
     </div>
 
-    <div class="field" data-f="committedAnother">
-      <label>Client committed another date?</label>
-      <div class="segmented" data-seg="committedAnother">
-        <button type="button" data-val="yes" class="${c.committedAnother==='yes'?'active yes':''}">Yes</button>
-        <button type="button" data-val="no" class="${c.committedAnother==='no'?'active no':''}">No</button>
+    <div data-wrap="committedSection" ${c.collected!=='no' ? 'hidden':''}>
+      <div class="field" data-f="committedAnother" style="${c.committedAnother==='yes' ? '' : 'margin-bottom:0;'}">
+        <label>Client committed another date?</label>
+        <div class="segmented" data-seg="committedAnother">
+          <button type="button" data-val="yes" class="${c.committedAnother==='yes'?'active yes':''}">Yes</button>
+          <button type="button" data-val="no" class="${c.committedAnother==='no'?'active no':''}">No</button>
+        </div>
       </div>
-    </div>
 
-    <div class="conditional" data-cond="committedAnother" ${c.committedAnother!=='yes' ? 'hidden':''} style="margin-bottom:0;">
-      <div class="field" data-f="nextCommitmentDate" style="margin-bottom:0;">
-        <label>Next commitment date</label>
-        <input type="date" data-field="nextCommitmentDate" value="${esc(c.nextCommitmentDate)}">
-        <div class="error-text">Choose a future date.</div>
+      <div class="conditional" data-cond="committedAnother" ${c.committedAnother!=='yes' ? 'hidden':''} style="margin-bottom:0;">
+        <div class="field" data-f="nextCommitmentDate" style="margin-bottom:0;">
+          <label>Next commitment date</label>
+          <input type="date" data-field="nextCommitmentDate" value="${esc(c.nextCommitmentDate)}">
+          <div class="error-text">Choose a future date.</div>
+        </div>
       </div>
     </div>
   </div>`;
@@ -1147,24 +1154,58 @@ function bindCollectionCard(main, c, i){
     el.addEventListener("input", ()=>{ c[el.dataset.field] = el.value; });
   });
 
+  // Communication with client "Others" reveals a free-text field in place
+  const commDetailsSelect = card.querySelector('select[data-field="communicationDetails"]');
+  if(commDetailsSelect){
+    commDetailsSelect.addEventListener("change", ()=>{
+      const otherField = card.querySelector('[data-f="communicationDetailsOther"]');
+      if(otherField) otherField.hidden = (commDetailsSelect.value !== "Others");
+    });
+  }
+
   // Collection modality "Others" reveals a free-text field in place —
   // same in-place pattern as the Yes/No toggles, no full re-render.
   const modalitySelect = card.querySelector('select[data-field="collectionModality"]');
   if(modalitySelect){
     modalitySelect.addEventListener("change", ()=>{
       const otherField = card.querySelector('[data-f="collectionModalityOther"]');
+      const modalityField = card.querySelector('[data-f="collectionModality"]');
       if(otherField) otherField.hidden = (modalitySelect.value !== "Others");
+      if(modalityField) modalityField.style.marginBottom = (modalitySelect.value === "Others") ? "" : "0";
     });
   }
 
-  card.querySelectorAll('[data-seg="communication"] button').forEach(b=>{
-    b.onclick = ()=>setSegmentedValue(card, "communication", "communication", b.dataset.val, c, "communication");
-  });
   card.querySelectorAll('[data-seg="collected"] button').forEach(b=>{
-    b.onclick = ()=>setSegmentedValue(card, "collected", "collected", b.dataset.val, c, "collected");
+    b.onclick = ()=>{
+      const val = b.dataset.val;
+      setSegmentedValue(card, "collected", "collected", val, c, "collected");
+      const collectedField = card.querySelector('[data-f="collected"]');
+      if(collectedField) collectedField.style.marginBottom = "";
+      const committedSection = card.querySelector('[data-wrap="committedSection"]');
+      if(committedSection){
+        committedSection.hidden = (val !== "no");
+      }
+      if(val === "yes"){
+        c.committedAnother = null;
+        c.nextCommitmentDate = "";
+        const commSeg = card.querySelector('[data-seg="committedAnother"]');
+        if(commSeg){
+          commSeg.querySelectorAll("button").forEach(btn=>btn.classList.remove("active","yes","no"));
+        }
+        const commCond = card.querySelector('[data-cond="committedAnother"]');
+        if(commCond) commCond.hidden = true;
+        const dateInp = card.querySelector('input[data-field="nextCommitmentDate"]');
+        if(dateInp) dateInp.value = "";
+      }
+    };
   });
   card.querySelectorAll('[data-seg="committedAnother"] button').forEach(b=>{
-    b.onclick = ()=>setSegmentedValue(card, "committedAnother", "committedAnother", b.dataset.val, c, "committedAnother");
+    b.onclick = ()=>{
+      const val = b.dataset.val;
+      setSegmentedValue(card, "committedAnother", "committedAnother", val, c, "committedAnother");
+      const commField = card.querySelector('[data-f="committedAnother"]');
+      if(commField) commField.style.marginBottom = (val === "yes") ? "" : "0";
+    };
   });
   const removeBtn = card.querySelector('[data-remove]');
   if(removeBtn){ removeBtn.onclick = ()=>{ App.state.clients.splice(i,1); App.render(); }; }
@@ -1226,12 +1267,13 @@ function validateCollectionClient(c, cardEl){
   }
   mark("clientCif", cifFormatOk && !cifIsSelf);
 
-  mark("communication", c.communication === "yes" || c.communication === "no");
-  if(c.communication === "yes"){
-    mark("contactMobile", V.mobileBD(c.contactMobile));
-    mark("commMode", V.nonEmpty(c.commMode));
-    mark("communicationDetails", V.nonEmpty(c.communicationDetails));
+  mark("contactMobile", V.mobileBD(c.contactMobile));
+  mark("commMode", V.nonEmpty(c.commMode));
+  mark("communicationDetails", V.nonEmpty(c.communicationDetails));
+  if(c.communicationDetails === "Others"){
+    mark("communicationDetailsOther", V.nonEmpty(c.communicationDetailsOther));
   }
+
   mark("collected", c.collected === "yes" || c.collected === "no");
   if(c.collected === "yes"){
     mark("collectedAmount", V.amount(c.collectedAmount));
@@ -1239,10 +1281,11 @@ function validateCollectionClient(c, cardEl){
     if(c.collectionModality === "Others"){
       mark("collectionModalityOther", V.nonEmpty(c.collectionModalityOther));
     }
-  }
-  mark("committedAnother", c.committedAnother === "yes" || c.committedAnother === "no");
-  if(c.committedAnother === "yes"){
-    mark("nextCommitmentDate", V.futureDate(c.nextCommitmentDate));
+  } else if(c.collected === "no"){
+    mark("committedAnother", c.committedAnother === "yes" || c.committedAnother === "no");
+    if(c.committedAnother === "yes"){
+      mark("nextCommitmentDate", V.futureDate(c.nextCommitmentDate));
+    }
   }
   return ok;
 }
@@ -1270,18 +1313,18 @@ async function submitCollection(){
       await addRecordAutoIncrement("collection_clients", {
         visit_id: visitId, seq: i+1,
         client_name: c.clientName, client_cif: c.clientCif,
-        communication: c.communication,
-        contact_mobile: c.communication==='yes' ? c.contactMobile : "",
-        contact_remarks: c.communication==='yes' ? c.contactRemarks : "",
-        comm_mode: c.communication==='yes' ? c.commMode : "",
-        communication_details: c.communication==='yes' ? c.communicationDetails : "",
+        communication: "yes",
+        contact_mobile: c.contactMobile,
+        contact_remarks: c.contactRemarks,
+        comm_mode: c.commMode,
+        communication_details: c.communicationDetails === "Others" ? c.communicationDetailsOther : c.communicationDetails,
         collected: c.collected,
         collected_amount: c.collected==='yes' ? c.collectedAmount : "",
         collection_modality: c.collected==='yes'
           ? (c.collectionModality === "Others" ? c.collectionModalityOther : c.collectionModality)
           : "",
-        committed_another_date: c.committedAnother,
-        next_commitment_date: c.committedAnother==='yes' ? c.nextCommitmentDate : ""
+        committed_another_date: c.collected==='no' ? c.committedAnother : "no",
+        next_commitment_date: (c.collected==='no' && c.committedAnother==='yes') ? c.nextCommitmentDate : ""
       });
     }
     App.goTo("success", { lastFormType:"collection", lastCount: App.state.clients.length });
@@ -1291,7 +1334,7 @@ async function submitCollection(){
 /* =========================================================================
    RM ACTIVITY FORM
    ========================================================================= */
-function blankActivityClient(){ return { clientName:"", clientPhone:"", visitPurpose:"" }; }
+function blankActivityClient(){ return { clientName:"", clientPhone:"", visitPurpose:"", visitPurposeOther:"" }; }
 
 Screens.activityForm = (main)=>{
   const clients = App.state.clients;
@@ -1352,10 +1395,23 @@ function renderActivityCard(c, i, total){
       <input type="tel" inputmode="numeric" maxlength="11" data-field="clientPhone" value="${esc(c.clientPhone)}" placeholder="01XXXXXXXXX">
       <div class="error-text">Enter a valid 11-digit mobile number.</div>
     </div>
-    <div class="field" data-f="visitPurpose" style="margin-bottom:0;">
-      <label>Visit purpose</label>
-      <input type="text" data-field="visitPurpose" value="${esc(c.visitPurpose)}" placeholder="e.g. New lead, follow-up, document collection">
-      <div class="error-text">Enter the visit purpose.</div>
+    <div class="field" data-f="visitPurpose" style="${c.visitPurpose==='Others' ? '' : 'margin-bottom:0;'}">
+      <label>Client Visit Purpose 1*</label>
+      <select data-field="visitPurpose">
+        <option value="">Select purpose</option>
+        <option value="First Time Visit" ${c.visitPurpose==='First Time Visit'?'selected':''}>First Time Visit</option>
+        <option value="Follow Up Visit" ${c.visitPurpose==='Follow Up Visit'?'selected':''}>Follow Up Visit</option>
+        <option value="Collection or OD Visit" ${c.visitPurpose==='Collection or OD Visit'?'selected':''}>Collection or OD Visit</option>
+        <option value="Staying in Branch for Disbursement Purposes" ${c.visitPurpose==='Staying in Branch for Disbursement Purposes'?'selected':''}>Staying in Branch for Disbursement Purposes</option>
+        <option value="Accompanying in CRM Visit" ${c.visitPurpose==='Accompanying in CRM Visit'?'selected':''}>Accompanying in CRM Visit</option>
+        <option value="Others" ${c.visitPurpose==='Others'?'selected':''}>Others</option>
+      </select>
+      <div class="error-text">Select the visit purpose.</div>
+    </div>
+    <div class="field" data-f="visitPurposeOther" ${c.visitPurpose!=='Others' ? 'hidden':''} style="margin-bottom:0;">
+      <label>Please specify</label>
+      <input type="text" data-field="visitPurposeOther" value="${esc(c.visitPurposeOther)}" placeholder="Describe the visit purpose">
+      <div class="error-text">Please specify the visit purpose.</div>
     </div>
   </div>`;
 }
@@ -1366,6 +1422,15 @@ function bindActivityCard(main, c, i){
   card.querySelectorAll("input[data-field], select[data-field]").forEach(el=>{
     el.addEventListener("input", ()=>{ c[el.dataset.field] = el.value; });
   });
+  const purposeSelect = card.querySelector('select[data-field="visitPurpose"]');
+  if(purposeSelect){
+    purposeSelect.addEventListener("change", ()=>{
+      const otherField = card.querySelector('[data-f="visitPurposeOther"]');
+      const purposeField = card.querySelector('[data-f="visitPurpose"]');
+      if(otherField) otherField.hidden = (purposeSelect.value !== "Others");
+      if(purposeField) purposeField.style.marginBottom = (purposeSelect.value === "Others") ? "" : "0";
+    });
+  }
   const removeBtn = card.querySelector('[data-remove]');
   if(removeBtn){ removeBtn.onclick = ()=>{ App.state.clients.splice(i,1); App.render(); }; }
 }
@@ -1381,6 +1446,9 @@ function validateActivityClient(c, cardEl){
   mark("clientName", V.nonEmpty(c.clientName));
   mark("clientPhone", V.mobileBD(c.clientPhone));
   mark("visitPurpose", V.nonEmpty(c.visitPurpose));
+  if(c.visitPurpose === "Others"){
+    mark("visitPurposeOther", V.nonEmpty(c.visitPurposeOther));
+  }
   return ok;
 }
 
@@ -1406,7 +1474,8 @@ async function submitActivity(){
       const c = App.state.clients[i];
       await addRecordAutoIncrement("activity_clients", {
         visit_id: visitId, seq: i+1,
-        client_name: c.clientName, client_phone: c.clientPhone, visit_purpose: c.visitPurpose
+        client_name: c.clientName, client_phone: c.clientPhone,
+        visit_purpose: c.visitPurpose === "Others" ? c.visitPurposeOther : c.visitPurpose
       });
     }
     App.goTo("success", { lastFormType:"activity", lastCount: App.state.clients.length });
